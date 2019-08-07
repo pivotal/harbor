@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/goharbor/harbor/src/common/utils/oidc"
+	"github.com/goharbor/harbor/src/core/auth/uaa"
 	"net/http"
 	"regexp"
 
@@ -414,13 +415,24 @@ func (b *basicAuthReqCtxModifier) Modify(ctx *beegoctx.Context) bool {
 	}
 
 	// standalone
-	user, err := auth.Login(models.AuthModel{
+	m := models.AuthModel{
 		Principal: username,
 		Password:  password,
-	})
+	}
+	user, err := auth.Login(m)
 	if err != nil {
 		log.Errorf("failed to authenticate %s: %v", username, err)
-		return false
+		log.Debug("Password didn't work, maybe it's a token")
+		// Do something here
+		var uaa = uaa.Auth{}
+		u, err := uaa.Authenticate(m)
+		if err != nil {
+			log.Errorf("something did not work: ", err)
+		}
+		pm := config.GlobalProjectMgr
+		sc := local.NewSecurityContext(u, pm)
+		setSecurCtxAndPM(ctx.Request, sc, pm)
+		return true
 	}
 	if user == nil {
 		log.Debug("basic auth user is nil")

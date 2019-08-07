@@ -42,13 +42,16 @@ func (u *Auth) Authenticate(m models.AuthModel) (*models.User, error) {
 		return nil, err
 	}
 	t, err := u.client.PasswordAuth(m.Principal, m.Password)
-	if err != nil {
-		return nil, auth.NewErrAuth(err.Error())
+
+	token := m.Password
+	if err == nil {
+		token = t.AccessToken
 	}
+
 	user := &models.User{
 		Username: m.Principal,
 	}
-	info, err2 := u.client.GetUserInfo(t.AccessToken)
+	info, err2 := u.client.GetUserInfo(token)
 	if err2 != nil {
 		log.Warningf("Failed to extract user info from UAA, error: %v", err2)
 	} else {
