@@ -246,7 +246,6 @@ var (
 		"guest": {
 			{Resource: rbac.ResourceSelf, Action: rbac.ActionRead},
 
-			{Resource: rbac.ResourceMember, Action: rbac.ActionRead},
 			{Resource: rbac.ResourceMember, Action: rbac.ActionList},
 
 			{Resource: rbac.ResourceLabel, Action: rbac.ActionRead},
