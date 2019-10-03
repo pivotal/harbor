@@ -118,10 +118,12 @@ func (pma *ProjectMemberAPI) Get() {
 			pma.SendInternalServerError(fmt.Errorf("Failed to query database for member list, error: %v", err))
 			return
 		}
-		if len(memberList) > 0 {
+		// Registry Code
+		// We don't want the guest user to sensitive information
+		roles := pma.SecurityCtx.GetProjectRoles(projectID)
+		if (len(memberList) > 0) && (len(roles) > 0 && roles[0] != common.RoleGuest) {
 			pma.Data["json"] = memberList
 		}
-
 	} else {
 		// return a specific member
 		queryMember.ID = pma.id
