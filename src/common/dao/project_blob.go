@@ -16,9 +16,12 @@ package dao
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/goharbor/harbor/src/common/models"
+
+	"github.com/goharbor/harbor/src/common"
 )
 
 // AddBlobToProject ...
@@ -34,6 +37,7 @@ func AddBlobToProject(blobID, projectID int64) (int64, error) {
 }
 
 // AddBlobsToProject ...
+// Note: pq has limitation on support parameters, the maximum length of blobs is 65535
 func AddBlobsToProject(projectID int64, blobs ...*models.Blob) (int64, error) {
 	if len(blobs) == 0 {
 		return 0, nil
@@ -50,7 +54,14 @@ func AddBlobsToProject(projectID int64, blobs ...*models.Blob) (int64, error) {
 		})
 	}
 
-	return GetOrmer().InsertMulti(len(projectBlobs), projectBlobs)
+	cnt, err := GetOrmer().InsertMulti(100, projectBlobs)
+	if err != nil {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
+			return cnt, ErrDupRows
+		}
+		return cnt, err
+	}
+	return cnt, nil
 }
 
 // RemoveBlobsFromProject ...
@@ -105,11 +116,12 @@ func GetBlobsNotInProject(projectID int64, blobDigests ...string) ([]*models.Blo
 }
 
 // CountSizeOfProject ...
+// foreign blob won't be calculated
 func CountSizeOfProject(pid int64) (int64, error) {
 	var blobs []models.Blob
 
 	sql := `
-SELECT 
+SELECT
     DISTINCT bb.digest,
     bb.id,
     bb.content_type,
@@ -120,9 +132,10 @@ JOIN artifact_blob afnb
     ON af.digest = afnb.digest_af
 JOIN BLOB bb
     ON afnb.digest_blob = bb.digest
-WHERE af.project_id = ? 
+WHERE af.project_id = ?
+AND bb.content_type != ?
 `
-	_, err := GetOrmer().Raw(sql, pid).QueryRows(&blobs)
+	_, err := GetOrmer().Raw(sql, pid, common.ForeignLayer).QueryRows(&blobs)
 	if err != nil {
 		return 0, err
 	}
@@ -139,7 +152,7 @@ WHERE af.project_id = ?
 func RemoveUntaggedBlobs(pid int64) error {
 	var blobs []models.Blob
 	sql := `
-SELECT 
+SELECT
     DISTINCT bb.digest,
     bb.id,
     bb.content_type,
@@ -150,7 +163,7 @@ JOIN artifact_blob afnb
     ON af.digest = afnb.digest_af
 JOIN BLOB bb
     ON afnb.digest_blob = bb.digest
-WHERE af.project_id = ? 
+WHERE af.project_id = ?
 `
 	_, err := GetOrmer().Raw(sql, pid).QueryRows(&blobs)
 	if len(blobs) == 0 {

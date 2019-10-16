@@ -42,9 +42,16 @@ func parseUploadedBlobSize(w http.ResponseWriter) (int64, error) {
 	// Range: Range indicating the current progress of the upload.
 	// https://github.com/opencontainers/distribution-spec/blob/master/spec.md#get-blob-upload
 	r := w.Header().Get("Range")
+	if r == "" {
+		return 0, errors.New("range header not found")
+	}
 
-	end := strings.Split(r, "-")[1]
-	size, err := strconv.ParseInt(end, 10, 64)
+	parts := strings.SplitN(r, "-", 2)
+	if len(parts) != 2 {
+		return 0, fmt.Errorf("range header bad value: %s", r)
+	}
+
+	size, err := strconv.ParseInt(parts[1], 10, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -274,7 +281,9 @@ func computeResourcesForManifestCreation(req *http.Request) (types.ResourceList,
 	size := info.Descriptor.Size
 
 	for _, blob := range blobs {
-		size += blob.Size
+		if !blob.IsForeignLayer() {
+			size += blob.Size
+		}
 	}
 
 	return types.ResourceList{types.ResourceStorage: size}, nil
@@ -297,7 +306,9 @@ func computeResourcesForManifestDeletion(req *http.Request) (types.ResourceList,
 
 	var size int64
 	for _, blob := range blobs {
-		size = size + blob.Size
+		if !blob.IsForeignLayer() {
+			size = size + blob.Size
+		}
 	}
 
 	return types.ResourceList{types.ResourceStorage: size}, nil

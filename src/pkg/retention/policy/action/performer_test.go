@@ -18,8 +18,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/goharbor/harbor/src/pkg/art"
 	"github.com/goharbor/harbor/src/pkg/retention/dep"
-	"github.com/goharbor/harbor/src/pkg/retention/res"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -31,7 +31,7 @@ type TestPerformerSuite struct {
 	suite.Suite
 
 	oldClient dep.Client
-	all       []*res.Candidate
+	all       []*art.Candidate
 }
 
 // TestPerformer is the entry of the TestPerformerSuite
@@ -41,12 +41,13 @@ func TestPerformer(t *testing.T) {
 
 // SetupSuite ...
 func (suite *TestPerformerSuite) SetupSuite() {
-	suite.all = []*res.Candidate{
+	suite.all = []*art.Candidate{
 		{
 			Namespace:  "library",
 			Repository: "harbor",
 			Kind:       "image",
 			Tag:        "latest",
+			Digest:     "latest",
 			PushedTime: time.Now().Unix(),
 			Labels:     []string{"L1", "L2"},
 		},
@@ -55,6 +56,7 @@ func (suite *TestPerformerSuite) SetupSuite() {
 			Repository: "harbor",
 			Kind:       "image",
 			Tag:        "dev",
+			Digest:     "dev",
 			PushedTime: time.Now().Unix(),
 			Labels:     []string{"L3"},
 		},
@@ -75,12 +77,13 @@ func (suite *TestPerformerSuite) TestPerform() {
 		all: suite.all,
 	}
 
-	candidates := []*res.Candidate{
+	candidates := []*art.Candidate{
 		{
 			Namespace:  "library",
 			Repository: "harbor",
 			Kind:       "image",
 			Tag:        "latest",
+			Digest:     "latest",
 			PushedTime: time.Now().Unix(),
 			Labels:     []string{"L1", "L2"},
 		},
@@ -97,16 +100,16 @@ func (suite *TestPerformerSuite) TestPerform() {
 type fakeRetentionClient struct{}
 
 // GetCandidates ...
-func (frc *fakeRetentionClient) GetCandidates(repo *res.Repository) ([]*res.Candidate, error) {
+func (frc *fakeRetentionClient) GetCandidates(repo *art.Repository) ([]*art.Candidate, error) {
 	return nil, errors.New("not implemented")
 }
 
 // Delete ...
-func (frc *fakeRetentionClient) Delete(candidate *res.Candidate) error {
+func (frc *fakeRetentionClient) Delete(candidate *art.Candidate) error {
 	return nil
 }
 
 // DeleteRepository ...
-func (frc *fakeRetentionClient) DeleteRepository(repo *res.Repository) error {
+func (frc *fakeRetentionClient) DeleteRepository(repo *art.Repository) error {
 	panic("implement me")
 }

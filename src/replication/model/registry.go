@@ -22,14 +22,17 @@ import (
 
 // const definition
 const (
-	RegistryTypeHarbor         RegistryType = "harbor"
-	RegistryTypeDockerHub      RegistryType = "docker-hub"
-	RegistryTypeDockerRegistry RegistryType = "docker-registry"
-	RegistryTypeHuawei         RegistryType = "huawei-SWR"
-	RegistryTypeGoogleGcr      RegistryType = "google-gcr"
-	RegistryTypeAwsEcr         RegistryType = "aws-ecr"
-	RegistryTypeAzureAcr       RegistryType = "azure-acr"
-	RegistryTypeAliAcr         RegistryType = "ali-acr"
+	RegistryTypeHarbor           RegistryType = "harbor"
+	RegistryTypeDockerHub        RegistryType = "docker-hub"
+	RegistryTypeDockerRegistry   RegistryType = "docker-registry"
+	RegistryTypeHuawei           RegistryType = "huawei-SWR"
+	RegistryTypeGoogleGcr        RegistryType = "google-gcr"
+	RegistryTypeAwsEcr           RegistryType = "aws-ecr"
+	RegistryTypeAzureAcr         RegistryType = "azure-acr"
+	RegistryTypeAliAcr           RegistryType = "ali-acr"
+	RegistryTypeJfrogArtifactory RegistryType = "jfrog-artifactory"
+	RegistryTypeQuayio           RegistryType = "quay-io"
+	RegistryTypeGitLab           RegistryType = "gitlab"
 
 	RegistryTypeHelmHub RegistryType = "helm-hub"
 

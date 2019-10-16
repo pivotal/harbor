@@ -36,7 +36,7 @@ var (
 	}
 )
 
-// blobStreamUploadBuilder interceptor for PATCH /v2/<name>/blobs/uploads/<uuid>
+// blobStreamUploadBuilder interceptor builder for PATCH /v2/<name>/blobs/uploads/<uuid>
 type blobStreamUploadBuilder struct{}
 
 func (*blobStreamUploadBuilder) Build(req *http.Request) (interceptor.Interceptor, error) {
@@ -48,9 +48,13 @@ func (*blobStreamUploadBuilder) Build(req *http.Request) (interceptor.Intercepto
 	uuid := s[2]
 
 	onResponse := func(w http.ResponseWriter, req *http.Request) {
+		if !config.QuotaPerProjectEnable() {
+			return
+		}
+
 		size, err := parseUploadedBlobSize(w)
 		if err != nil {
-			log.Errorf("failed to parse uploaded blob size for upload %s", uuid)
+			log.Errorf("failed to parse uploaded blob size for upload %s, error: %v", uuid, err)
 			return
 		}
 
@@ -118,6 +122,11 @@ func (*manifestCreationBuilder) Build(req *http.Request) (interceptor.Intercepto
 
 	// Replace request with manifests info context
 	*req = *req.WithContext(util.NewManifestInfoContext(req.Context(), info))
+
+	// Sync manifest layers to blobs for foreign layers not pushed and they are not in blob table
+	if err := info.SyncBlobs(); err != nil {
+		log.Warningf("Failed to sync blobs, error: %v", err)
+	}
 
 	opts := []quota.Option{
 		quota.EnforceResources(config.QuotaPerProjectEnable()),

@@ -23,10 +23,10 @@ import (
 
 	"github.com/goharbor/harbor/src/jobservice/job"
 	"github.com/goharbor/harbor/src/jobservice/logger"
+	"github.com/goharbor/harbor/src/pkg/art"
 	"github.com/goharbor/harbor/src/pkg/retention/dep"
 	"github.com/goharbor/harbor/src/pkg/retention/policy"
 	"github.com/goharbor/harbor/src/pkg/retention/policy/lwp"
-	"github.com/goharbor/harbor/src/pkg/retention/res"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 )
@@ -116,7 +116,7 @@ func (pj *Job) Run(ctx job.Context, params job.Parameters) error {
 	return saveRetainNum(ctx, results, allCandidates)
 }
 
-func saveRetainNum(ctx job.Context, retained []*res.Result, allCandidates []*res.Candidate) error {
+func saveRetainNum(ctx job.Context, retained []*art.Result, allCandidates []*art.Candidate) error {
 	var delNum int
 	for _, r := range retained {
 		if r.Error == nil {
@@ -138,7 +138,7 @@ func saveRetainNum(ctx job.Context, retained []*res.Result, allCandidates []*res
 	return nil
 }
 
-func logResults(logger logger.Interface, all []*res.Candidate, results []*res.Result) {
+func logResults(logger logger.Interface, all []*art.Candidate, results []*art.Result) {
 	hash := make(map[string]error, len(results))
 	for _, r := range results {
 		if r.Target != nil {
@@ -146,7 +146,7 @@ func logResults(logger logger.Interface, all []*res.Candidate, results []*res.Re
 		}
 	}
 
-	op := func(art *res.Candidate) string {
+	op := func(art *art.Candidate) string {
 		if e, exists := hash[art.Hash()]; exists {
 			if e != nil {
 				return actionMarkError
@@ -164,7 +164,8 @@ func logResults(logger logger.Interface, all []*res.Candidate, results []*res.Re
 
 	for _, c := range all {
 		row := []string{
-			arn(c),
+			c.Digest,
+			c.Tag,
 			c.Kind,
 			strings.Join(c.Labels, ","),
 			t(c.PushedTime),
@@ -176,7 +177,8 @@ func logResults(logger logger.Interface, all []*res.Candidate, results []*res.Re
 	}
 
 	table := tablewriter.NewWriter(&buf)
-	table.SetHeader([]string{"Artifact", "Kind", "labels", "PushedTime", "PulledTime", "CreatedTime", "Retention"})
+	table.SetAutoFormatHeaders(false)
+	table.SetHeader([]string{"Digest", "Tag", "Kind", "Labels", "PushedTime", "PulledTime", "CreatedTime", "Retention"})
 	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
 	table.SetCenterSeparator("|")
 	table.AppendBulk(data)
@@ -192,11 +194,14 @@ func logResults(logger logger.Interface, all []*res.Candidate, results []*res.Re
 	}
 }
 
-func arn(art *res.Candidate) string {
+func arn(art *art.Candidate) string {
 	return fmt.Sprintf("%s/%s:%s", art.Namespace, art.Repository, art.Tag)
 }
 
 func t(tm int64) string {
+	if tm == 0 {
+		return ""
+	}
 	return time.Unix(tm, 0).Format("2006/01/02 15:04:05")
 }
 
@@ -232,7 +237,7 @@ func getParamDryRun(params job.Parameters) (bool, error) {
 	return dryRun, nil
 }
 
-func getParamRepo(params job.Parameters) (*res.Repository, error) {
+func getParamRepo(params job.Parameters) (*art.Repository, error) {
 	v, ok := params[ParamRepo]
 	if !ok {
 		return nil, errors.Errorf("missing parameter: %s", ParamRepo)
@@ -243,7 +248,7 @@ func getParamRepo(params job.Parameters) (*res.Repository, error) {
 		return nil, errors.Errorf("invalid parameter: %s", ParamRepo)
 	}
 
-	repo := &res.Repository{}
+	repo := &art.Repository{}
 	if err := repo.FromJSON(repoJSON); err != nil {
 		return nil, errors.Wrap(err, "parse repository from JSON")
 	}

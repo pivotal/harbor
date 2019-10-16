@@ -40,7 +40,7 @@ import (
 	"github.com/goharbor/harbor/src/core/config"
 	"github.com/goharbor/harbor/src/core/promgr"
 	"github.com/goharbor/harbor/src/pkg/scan/whitelist"
-	"github.com/opencontainers/go-digest"
+	digest "github.com/opencontainers/go-digest"
 )
 
 type contextKey string
@@ -172,6 +172,17 @@ func (info *ManifestInfo) BlobMutexKey(blob *models.Blob, suffix ...string) stri
 	a := []string{"quota", projectName, "blob", blob.Digest}
 
 	return strings.Join(append(a, suffix...), ":")
+}
+
+// SyncBlobs sync layers of manifest to blobs
+func (info *ManifestInfo) SyncBlobs() error {
+	err := dao.SyncBlobs(info.References)
+	if err == dao.ErrDupRows {
+		log.Warning("Some blobs created by others, ignore this error")
+		return nil
+	}
+
+	return err
 }
 
 // GetBlobsNotInProject returns blobs of the manifest which not in the project
@@ -334,6 +345,10 @@ func (pc PmsPolicyChecker) ContentTrustEnabled(name string) bool {
 	if err != nil {
 		log.Errorf("Unexpected error when getting the project, error: %v", err)
 		return true
+	}
+	if project == nil {
+		log.Debugf("project %s not found", name)
+		return false
 	}
 	return project.ContentTrustEnabled()
 }

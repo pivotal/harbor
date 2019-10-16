@@ -21,6 +21,7 @@ import { Project } from "../project";
 import { clone, ErrorHandler } from "@harbor/ui";
 import { OriginCron } from "@harbor/ui";
 import { CronScheduleComponent } from "@harbor/ui";
+import { finalize } from "rxjs/operators";
 
 const MIN = 60000;
 const SEC = 1000;
@@ -75,9 +76,9 @@ export class TagRetentionComponent implements OnInit {
     currentPage: number = 1;
     pageSize: number = 10;
     totalCount: number = 0;
-    @ViewChild('cronScheduleComponent')
+    @ViewChild('cronScheduleComponent', {static: false})
     cronScheduleComponent: CronScheduleComponent;
-    @ViewChild('addRule') addRuleComponent: AddRuleComponent;
+    @ViewChild('addRule', {static: false}) addRuleComponent: AddRuleComponent;
     constructor(
         private route: ActivatedRoute,
         private tagRetentionService: TagRetentionService,
@@ -166,6 +167,13 @@ export class TagRetentionComponent implements OnInit {
         if (this.retentionId) {
             this.tagRetentionService.getRetention(this.retentionId).subscribe(
                 response => {
+                    if (response && response.rules && response.rules.length > 0) {
+                        response.rules.forEach(item => {
+                            if (!item.params) {
+                                item.params = {};
+                            }
+                        });
+                    }
                     this.retention = response;
                     this.loadingRule = false;
                 }, error => {
@@ -244,7 +252,9 @@ export class TagRetentionComponent implements OnInit {
         this.selectedItem = null;
         this.loadingExecutions = true;
         if (this.retentionId) {
-            this.tagRetentionService.getRunNowList(this.retentionId, this.currentPage, this.pageSize).subscribe(
+            this.tagRetentionService.getRunNowList(this.retentionId, this.currentPage, this.pageSize)
+              .pipe(finalize(() => this.loadingExecutions = false))
+              .subscribe(
               response => {
                     // Get total count
                     if (response.headers) {
@@ -254,33 +264,35 @@ export class TagRetentionComponent implements OnInit {
                         }
                     }
                     this.executionList = response.body as Array<any>;
-                    this.loadingExecutions = false;
                     TagRetentionComponent.calculateDuration(this.executionList);
                 }, error => {
-                    this.loadingExecutions = false;
                     this.errorHandler.error(error);
                 });
         } else {
+          setTimeout(() => {
             this.loadingExecutions = false;
+          });
         }
     }
 
     static calculateDuration(arr: Array<any>) {
         if (arr && arr.length > 0) {
             for (let i = 0; i < arr.length; i++) {
-                let duration = new Date(arr[i].end_time).getTime() - new Date(arr[i].start_time).getTime();
-                let min = Math.floor(duration / MIN);
-                let sec = Math.floor((duration % MIN) / SEC);
-                arr[i]['duration'] = "";
-                if ((min || sec) && duration > 0) {
-                    if (min) {
-                        arr[i]['duration'] += '' + min + MIN_STR;
+                if (arr[i].end_time && arr[i].start_time) {
+                    let duration = new Date(arr[i].end_time).getTime() - new Date(arr[i].start_time).getTime();
+                    let min = Math.floor(duration / MIN);
+                    let sec = Math.floor((duration % MIN) / SEC);
+                    arr[i]['duration'] = "";
+                    if ((min || sec) && duration > 0) {
+                        if (min) {
+                            arr[i]['duration'] += '' + min + MIN_STR;
+                        }
+                        if (sec) {
+                            arr[i]['duration'] += '' + sec + SEC_STR;
+                        }
+                    } else {
+                        arr[i]['duration'] = "0";
                     }
-                    if (sec) {
-                        arr[i]['duration'] += '' + sec + SEC_STR;
-                    }
-                } else if ( min === 0 && sec === 0 && duration > 0) {
-                    arr[i]['duration'] = "0";
                 } else {
                     arr[i]['duration'] = "N/A";
                 }
@@ -315,13 +327,13 @@ export class TagRetentionComponent implements OnInit {
             this.index = index;
             this.historyList = [];
             this.loadingHistories = true;
-            this.tagRetentionService.getExecutionHistory(this.retentionId, executionId).subscribe(
+            this.tagRetentionService.getExecutionHistory(this.retentionId, executionId)
+              .pipe(finalize(() => this.loadingHistories = false))
+              .subscribe(
                 res => {
-                    this.loadingHistories = false;
                     this.historyList = res;
                     TagRetentionComponent.calculateDuration(this.historyList);
                 }, error => {
-                    this.loadingHistories = false;
                     this.errorHandler.error(error);
                 });
         } else {
@@ -353,6 +365,9 @@ export class TagRetentionComponent implements OnInit {
                         this.addRuleComponent.close();
                         this.addRuleComponent.onGoing = false;
                     }, error => {
+                        if (error && error.error && error.error.message) {
+                            error = this.tagRetentionService.getI18nKey(error.error.message);
+                        }
                         this.addRuleComponent.inlineAlert.showInlineError(error);
                         this.loadingRule = false;
                         this.addRuleComponent.onGoing = false;
@@ -366,7 +381,10 @@ export class TagRetentionComponent implements OnInit {
                     }, error => {
                         this.loadingRule = false;
                         this.addRuleComponent.onGoing = false;
-                        this.addRuleComponent.inlineAlert.showInlineError(error);
+                      if (error && error.error && error.error.message) {
+                          error = this.tagRetentionService.getI18nKey(error.error.message);
+                      }
+                      this.addRuleComponent.inlineAlert.showInlineError(error);
                     });
             }
         } else {
@@ -378,6 +396,9 @@ export class TagRetentionComponent implements OnInit {
                     this.addRuleComponent.close();
                     this.addRuleComponent.onGoing = false;
                 }, error => {
+                    if (error && error.error && error.error.message) {
+                        error = this.tagRetentionService.getI18nKey(error.error.message);
+                    }
                     this.addRuleComponent.inlineAlert.showInlineError(error);
                     this.loadingRule = false;
                     this.addRuleComponent.onGoing = false;

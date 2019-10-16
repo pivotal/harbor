@@ -10,10 +10,12 @@
         <ul *ngIf="retention?.rules?.length > 0" class="list-unstyled">
             <li class="rule" *ngFor="let rule of retention?.rules;let i = index;">
                 <div class="clr-row">
-                    <div class="clr-col-1">
-                        <clr-icon (click)="openEditor(i)" shape="ellipsis-vertical"
-                                  class="dropdown-toggle hand"></clr-icon>
+                    <div class="clr-col-2 flex-150">
                         <div class="dropdown" [ngClass]="{open:ruleIndex===i}">
+                            <button (click)="openEditor(i)" class="dropdown-toggle btn btn-link btn-sm">
+                                {{'TAG_RETENTION.ACTION' | translate}}
+                                <clr-icon shape="caret down"></clr-icon>
+                            </button>
                             <div class="dropdown-menu">
                                 <button *ngIf="!rule?.disabled" type="button" class="dropdown-item"
                                         (click)="toggleDisable(i,true)">{{'TAG_RETENTION.DISABLE' | translate}}</button>
@@ -53,12 +55,13 @@
                 </div>
             </li>
         </ul>
-        <div class="v-center clr-row pt-1">
-            <div class="clr-col-5 color-97 font-size-54">
-                {{'TAG_RETENTION.ADD_RULE_HELP_1' | translate}}
+        <div class="v-center clr-row" [ngClass]="{'pt-1':retention?.rules?.length > 0}">
+            <div class="clr-col-2 flex-150"></div>
+            <div class="clr-col-2">
+                <button [disabled]="retention?.rules?.length >= 15" class="btn btn-primary btn-sm" (click)="openAddRule()">{{'TAG_RETENTION.ADD_RULE' | translate}}</button>
             </div>
-            <div class="clr-col">
-                <button [disabled]="retention?.rules?.length >= 15" class="btn btn-link" (click)="openAddRule()">{{'TAG_RETENTION.ADD_RULE' | translate}}</button>
+            <div class="clr-col-8 color-97 font-size-54">
+                {{'TAG_RETENTION.ADD_RULE_HELP_1' | translate}}
             </div>
         </div>
     </div>
@@ -67,8 +70,8 @@
     <cron-selection [disabled]="!(retention?.rules?.length > 0)" #cronScheduleComponent [labelCurrent]="label" [labelEdit]='label' [originCron]='originCron()' (inputvalue)="openConfirm($event)"></cron-selection>
 </div>
 <div class="clr-row pt-1">
-    <div class="clr-col-2 pt-2"><label class="label-left font-size-54">{{'TAG_RETENTION.RETENTION_RUNS' | translate}}</label></div>
-    <div class="clr-col-10 padding-left-4">
+    <div class="clr-col-2 pt-2 flex-150"><label class="label-left font-size-54">{{'TAG_RETENTION.RETENTION_RUNS' | translate}}</label></div>
+    <div class="clr-col-10">
         <clr-dg-action-bar>
                 <button [disabled]="!(retention?.rules?.length > 0)" class="btn btn-outline"
                         (click)="isRetentionRunOpened=true">
@@ -96,6 +99,9 @@
                     {{'TAG_RETENTION.DRY_RUN' | translate}}
                 </clr-dg-column>
                 <clr-dg-column>
+                    {{'TAG_RETENTION.EXECUTION_TYPE' | translate}}
+                </clr-dg-column>
+                <clr-dg-column>
                     {{'TAG_RETENTION.START_TIME' | translate}}
                 </clr-dg-column>
                 <clr-dg-column>
@@ -113,7 +119,9 @@
                     <clr-dg-cell class="hand"
                                  (click)="openDetail(i,execution.id)">{{execution.dry_run ? 'YES' : 'NO'}}</clr-dg-cell>
                     <clr-dg-cell class="hand"
-                                 (click)="openDetail(i,execution.id)">{{execution.start_time|date:'short'}}</clr-dg-cell>
+                                 (click)="openDetail(i,execution.id)">{{execution.trigger}}</clr-dg-cell>
+                    <clr-dg-cell class="hand"
+                                 (click)="openDetail(i,execution.id)">{{execution.start_time|date:'medium'}}</clr-dg-cell>
                     <clr-dg-cell class="hand" (click)="openDetail(i,execution.id)">{{execution.duration}}</clr-dg-cell>
                     <clr-dg-row-detail *ngIf="index===i">
                         <clr-datagrid [clrDgLoading]="loadingHistories" class="w-100">
@@ -130,7 +138,7 @@
                                 <clr-dg-cell>{{task.repository}}</clr-dg-cell>
                                 <clr-dg-cell>{{task.status}}</clr-dg-cell>
                                 <clr-dg-cell>{{task.retained}}/{{task.total}}</clr-dg-cell>
-                                <clr-dg-cell>{{task.start_time|date:'short'}}</clr-dg-cell>
+                                <clr-dg-cell>{{task.start_time|date:'medium'}}</clr-dg-cell>
                                 <clr-dg-cell>{{task.duration}}</clr-dg-cell>
                                 <clr-dg-cell><span (click)="seeLog(task.execution_id,task.id)"
                                                    class="hand color-79b">{{'TAG_RETENTION.LOG' | translate}}</span>

@@ -17,6 +17,7 @@ package controllers
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/goharbor/harbor/src/common/dao/group"
 	"net/http"
 	"strings"
 
@@ -50,12 +51,13 @@ type oidcUserData struct {
 	Subject  string `json:"sub"`
 	Username string `json:"name"`
 	Email    string `json:"email"`
+	GroupIDs []int  `json:"group_ids"`
 }
 
 // Prepare include public code path for call request handler of OIDCController
 func (oc *OIDCController) Prepare() {
 	if mode, _ := config.AuthMode(); mode != common.OIDCAuth {
-		oc.SendPreconditionFailedError(fmt.Errorf("Auth Mode: %s is not OIDC based", mode))
+		oc.SendPreconditionFailedError(fmt.Errorf("auth mode: %s is not OIDC based", mode))
 		return
 	}
 }
@@ -83,6 +85,15 @@ func (oc *OIDCController) Callback() {
 		oc.SendBadRequestError(errors.New("State mismatch"))
 		return
 	}
+
+	errorCode := oc.Ctx.Request.URL.Query().Get("error")
+	if errorCode != "" {
+		errorDescription := oc.Ctx.Request.URL.Query().Get("error_description")
+		log.Errorf("OIDC callback returned error: %s - %s", errorCode, errorDescription)
+		oc.SendBadRequestError(errors.Errorf("OIDC callback returned error: %s - %s", errorCode, errorDescription))
+		return
+	}
+
 	code := oc.Ctx.Request.URL.Query().Get("code")
 	ctx := oc.Ctx.Request.Context()
 	token, err := oidc.ExchangeToken(ctx, code)
@@ -104,6 +115,10 @@ func (oc *OIDCController) Callback() {
 	if err != nil {
 		oc.SendInternalServerError(err)
 		return
+	}
+	d.GroupIDs, err = group.GetGroupIDByGroupName(oidc.GroupsFromToken(idToken), common.OIDCGroupType)
+	if err != nil {
+		log.Warningf("Failed to get group ID list, due to error: %v, setting empty list into user model.", err)
 	}
 	ouDataStr, err := json.Marshal(d)
 	if err != nil {
@@ -128,6 +143,7 @@ func (oc *OIDCController) Callback() {
 		oc.Controller.Redirect(fmt.Sprintf("/oidc-onboard?username=%s", strings.Replace(d.Username, " ", "_", -1)),
 			http.StatusFound)
 	} else {
+		u.GroupIDs = d.GroupIDs
 		oidcUser, err := dao.GetOIDCUserByUserID(u.UserID)
 		if err != nil {
 			oc.SendInternalServerError(err)
@@ -139,7 +155,7 @@ func (oc *OIDCController) Callback() {
 			oc.SendInternalServerError(err)
 			return
 		}
-		oc.SetSession(userKey, *u)
+		oc.PopulateUserSession(*u)
 		oc.Controller.Redirect("/", http.StatusFound)
 	}
 }
@@ -194,6 +210,7 @@ func (oc *OIDCController) Onboard() {
 		Username:     username,
 		Realname:     d.Username,
 		Email:        email,
+		GroupIDs:     d.GroupIDs,
 		OIDCUserMeta: &oidcUser,
 		Comment:      oidcUserComment,
 	}
@@ -210,8 +227,8 @@ func (oc *OIDCController) Onboard() {
 	}
 
 	user.OIDCUserMeta = nil
-	oc.SetSession(userKey, user)
 	oc.DelSession(userInfoKey)
+	oc.PopulateUserSession(user)
 }
 
 func secretAndToken(tokenBytes []byte) (string, string, error) {
