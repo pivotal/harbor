@@ -17,6 +17,10 @@ package api
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"regexp"
+	"strconv"
+
 	"github.com/goharbor/harbor/src/common"
 	"github.com/goharbor/harbor/src/common/dao"
 	"github.com/goharbor/harbor/src/common/models"
@@ -25,9 +29,6 @@ import (
 	"github.com/goharbor/harbor/src/common/utils"
 	"github.com/goharbor/harbor/src/common/utils/log"
 	"github.com/goharbor/harbor/src/core/config"
-	"net/http"
-	"regexp"
-	"strconv"
 )
 
 // UserAPI handles request to /api/users/{}
@@ -221,11 +222,14 @@ func (ua *UserAPI) Search() {
 	}
 	query := &models.UserQuery{
 		Username: ua.GetString("username"),
-		Email:    ua.GetString("email"),
 		Pagination: &models.Pagination{
 			Page: page,
 			Size: size,
 		},
+	}
+	if len(query.Username) == 0 {
+		ua.SendBadRequestError(errors.New("username is required"))
+		return
 	}
 
 	total, err := dao.GetTotalOfUsers(query)
@@ -416,20 +420,21 @@ func (ua *UserAPI) ChangePassword() {
 		return
 	}
 	if changePwdOfOwn {
-		if user.Password != utils.Encrypt(req.OldPassword, user.Salt) {
+		if user.Password != utils.Encrypt(req.OldPassword, user.Salt, user.PasswordVersion) {
 			log.Info("incorrect old_password")
 			ua.SendForbiddenError(errors.New("incorrect old_password"))
 			return
 		}
 	}
-	if user.Password == utils.Encrypt(req.NewPassword, user.Salt) {
+	if user.Password == utils.Encrypt(req.NewPassword, user.Salt, user.PasswordVersion) {
 		ua.SendBadRequestError(errors.New("the new password can not be same with the old one"))
 		return
 	}
 
 	updatedUser := models.User{
-		UserID:   ua.userID,
-		Password: req.NewPassword,
+		UserID:          ua.userID,
+		Password:        req.NewPassword,
+		PasswordVersion: user.PasswordVersion,
 	}
 	if err = dao.ChangeUserPassword(updatedUser); err != nil {
 		ua.SendInternalServerError(fmt.Errorf("failed to change password of user %d: %v", ua.userID, err))
