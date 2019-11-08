@@ -1,5 +1,5 @@
 # Makefile for a harbor project
-#	
+#
 # Targets:
 #
 # build: 	build harbor photon images
@@ -93,7 +93,7 @@ DOCKERIMAGENAME_MIGRATOR=goharbor/harbor-migrator
 # for chart server (chartmuseum)
 DOCKERFILEPATH_CHART_SERVER=$(DOCKERFILEPATH)/chartserver
 DOCKERFILENAME_CHART_SERVER=Dockerfile
-CHART_SERVER_CODE_BASE=github.com/helm/chartmuseum
+CHART_SERVER_CODE_BASE=https://github.com/helm/chartmuseum.git
 CHART_SERVER_MAIN_PATH=cmd/chartmuseum
 CHART_SERVER_BIN_NAME=chartm
 
@@ -109,20 +109,20 @@ _build_db:
 
 _build_portal:
 	@echo "building portal container for photon..."
-	$(DOCKERBUILD) -f $(DOCKERFILEPATH_PORTAL)/$(DOCKERFILENAME_PORTAL) -t $(DOCKERIMAGENAME_PORTAL):$(VERSIONTAG) .
+	$(DOCKERBUILD) --build-arg npm_registry=$(NPM_REGISTRY) -f $(DOCKERFILEPATH_PORTAL)/$(DOCKERFILENAME_PORTAL) -t $(DOCKERIMAGENAME_PORTAL):$(VERSIONTAG) .
 	@echo "Done."
 
-_build_core:	
+_build_core:
 	@echo "building core container for photon..."
 	@$(DOCKERBUILD) -f $(DOCKERFILEPATH_CORE)/$(DOCKERFILENAME_CORE) -t $(DOCKERIMAGENAME_CORE):$(VERSIONTAG) .
 	@echo "Done."
-	
-_build_jobservice:		
+
+_build_jobservice:
 	@echo "building jobservice container for photon..."
 	@$(DOCKERBUILD) -f $(DOCKERFILEPATH_JOBSERVICE)/$(DOCKERFILENAME_JOBSERVICE) -t $(DOCKERIMAGENAME_JOBSERVICE):$(VERSIONTAG) .
 	@echo "Done."
 
-_build_log:	
+_build_log:
 	@echo "building log container for photon..."
 	$(DOCKERBUILD) -f $(DOCKERFILEPATH_LOG)/$(DOCKERFILENAME_LOG) -t $(DOCKERIMAGENAME_LOG):$(VERSIONTAG) .
 	@echo "Done."
@@ -154,7 +154,7 @@ _build_chart_server:
 		rm -rf $(DOCKERFILEPATH_CHART_SERVER)/binary; \
 		echo "Done." ; \
 	fi
-		
+
 _build_nginx:
 	@echo "building nginx container for photon..."
 	@$(DOCKERBUILD) -f $(DOCKERFILEPATH_NGINX)/$(DOCKERFILENAME_NGINX) -t $(DOCKERIMAGENAME_NGINX):$(NGINXVERSION) .
@@ -175,19 +175,19 @@ _build_notary:
 		rm -rf $(DOCKERFILEPATH_NOTARY)/binary; \
 		echo "Done."; \
 	fi
-		
+
 _build_registry:
 	@if [ "$(BUILDBIN)" != "true" ] ; then \
 		rm -rf $(DOCKERFILEPATH_REG)/binary && mkdir -p $(DOCKERFILEPATH_REG)/binary && \
 		$(call _get_binary, https://storage.googleapis.com/harbor-builds/bin/registry/release-$(REGISTRYVERSION)/registry, $(DOCKERFILEPATH_REG)/binary/registry); \
 	else \
-		cd $(DOCKERFILEPATH_REG) && $(DOCKERFILEPATH_REG)/builder $(REGISTRYVERSION) && cd - ; \
+		cd $(DOCKERFILEPATH_REG) && $(DOCKERFILEPATH_REG)/builder $(REGISTRY_SRC_TAG) && cd - ; \
 	fi
 	@echo "building registry container for photon..."
 	@chmod 655 $(DOCKERFILEPATH_REG)/binary/registry && $(DOCKERBUILD) -f $(DOCKERFILEPATH_REG)/$(DOCKERFILENAME_REG) -t $(DOCKERIMAGENAME_REG):$(REGISTRYVERSION)-$(VERSIONTAG) .
 	@echo "Done."
 
-_build_registryctl:		
+_build_registryctl:
 	@echo "building registry controller for photon..."
 	@$(DOCKERBUILD) -f $(DOCKERFILEPATH_REGISTRYCTL)/$(DOCKERFILENAME_REGISTRYCTL) -t $(DOCKERIMAGENAME_REGISTRYCTL):$(VERSIONTAG) .
 	@rm -rf $(DOCKERFILEPATH_REG)/binary
@@ -217,7 +217,7 @@ cleanimage:
 	- $(DOCKERRMIMAGE) -f $(DOCKERIMAGENAME_CORE):$(VERSIONTAG)
 	- $(DOCKERRMIMAGE) -f $(DOCKERIMAGENAME_JOBSERVICE):$(VERSIONTAG)
 	- $(DOCKERRMIMAGE) -f $(DOCKERIMAGENAME_LOG):$(VERSIONTAG)
-	
+
 .PHONY: clean
 clean: cleanimage
 

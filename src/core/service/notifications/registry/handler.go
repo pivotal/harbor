@@ -17,6 +17,7 @@ package registry
 import (
 	"encoding/json"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -42,6 +43,11 @@ type NotificationHandler struct {
 
 const manifestPattern = `^application/vnd.docker.distribution.manifest.v\d\+(json|prettyjws)`
 const vicPrefix = "vic/"
+
+// Prepare turns off xsrf check for notification handler
+func (n *NotificationHandler) Prepare() {
+	n.EnableXSRF = false
+}
 
 // Post handles POST request, and records audit log or refreshes cache based on event.
 func (n *NotificationHandler) Post() {
@@ -137,7 +143,6 @@ func (n *NotificationHandler) Post() {
 				log.Errorf("failed to build image push event metadata: %v", err)
 			}
 
-			// TODO: handle image delete event and chart event
 			go func() {
 				e := &rep_event.Event{
 					Type: rep_event.EventTypeImagePush,
@@ -146,7 +151,9 @@ func (n *NotificationHandler) Post() {
 						Metadata: &model.ResourceMetadata{
 							Repository: &model.Repository{
 								Name: repository,
-								// TODO filling the metadata
+								Metadata: map[string]interface{}{
+									"public": strconv.FormatBool(pro.IsPublic()),
+								},
 							},
 							Vtags: []string{tag},
 						},
