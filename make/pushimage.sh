@@ -4,7 +4,7 @@ set +e
 set -o noglob
 
 echo "This shell will push specific image to registry server."
-echo "Usage: #./pushimage [imgae tag] [registry username] [registry password]  [registry server]"
+echo "Usage: #./pushimage [image tag] [registry username] [registry password]  [registry server]"
 
 #
 # Set Colors
@@ -47,29 +47,29 @@ note() { printf "\n${underline}${bold}${blue}Note:${reset} ${blue}%s${reset}\n" 
 
 
 type_exists() {
-  if [ $(type -P $1) ]; then
+  if [ $(type -P "$1") ]; then
     return 0
   fi
   return 1
 }
 
 # Check variables
-if [ -z $1 ]; then
+if [ -z "$1" ]; then
   error "Please set the 'image' variable"
   exit 1
 fi
 
-if [ -z $2 ]; then
+if [ -z "$2" ]; then
   error "Please set the 'username' variable"
   exit 1
 fi
 
-if [ -z $3 ]; then
+if [ -z "$3" ]; then
   error "Please set the 'password' variable"
   exit 1
 fi
 
-if [ -z $4 ]; then
+if [ -z "$4" ]; then
   info "Using default registry server (dockerhub)."
 fi
 
@@ -99,16 +99,13 @@ set -e
 # Login to the registry
 h2 "Login to the Docker registry"
 
-DOCKER_LOGIN="docker login --username $USERNAME --password $PASSWORD $REGISTRY"
-info "docker login --username $USERNAME --password *******"
-DOCKER_LOGIN_OUTPUT=$($DOCKER_LOGIN)
+docker login -u "$USERNAME" -p "$PASSWORD" "$REGISTRY"
 
 if [ $? -ne 0 ]; then
-  warn "$DOCKER_LOGIN_OUTPUT"
-  error "Login to Docker registry $REGISTRY failed"
+  error "Login to Docker registry ${REGISTRY} failed"
   exit 1
 else
-  success "Login to Docker registry $REGISTRY succeeded";
+  success "Login to Docker registry ${REGISTRY} succeeded";
 fi
 
 # Push the docker image
