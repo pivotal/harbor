@@ -73,17 +73,17 @@ PORTAL_PATH=$(BUILDPATH)/src/portal
 CHECKENVCMD=checkenv.sh
 
 # parameters
-REGISTRYSERVER=
-REGISTRYPROJECTNAME=goharbor
-DEVFLAG=true
-NOTARYFLAG=false
-CLAIRFLAG=false
-HTTPPROXY=
-BUILDBIN=false
-MIGRATORFLAG=false
-NPM_REGISTRY=https://registry.npmjs.org
+export REGISTRYSERVER=
+export REGISTRYPROJECTNAME=goharbor
+export DEVFLAG=true
+export NOTARYFLAG=false
+export CLAIRFLAG=false
+export HTTPPROXY=
+export BUILDBIN=false
+export MIGRATORFLAG=false
+export NPM_REGISTRY=https://registry.npmjs.org
 # enable/disable chart repo supporting
-CHARTFLAG=false
+export CHARTFLAG=false
 
 # version prepare
 # for docker image tag
